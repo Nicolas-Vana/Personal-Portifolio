@@ -1,0 +1,1076 @@
+// *********** Create the folder where the results of this run will be stored
+
+strdef path, tmp_path, system_cmd, root_path, move_parameters, system_cmd2, test
+objref version_counter_file, input_file, current_run_file
+
+input_file = new File()
+input_file.ropen("Parameter_input.txt")
+
+version_counter_file = new File()
+version_counter_file.ropen("Version counter.txt")
+
+current_run_file = new File()
+current_run_file.wopen("Current Run.txt")
+current_run_file.printf("1")
+current_run_file.close()
+
+version_counter = version_counter_file.scanvar()
+sprint(system_cmd, "mkdir Resultados_subversao_V%d", version_counter)
+system(system_cmd)
+
+sprint(system_cmd2, "copy model.hoc \Resultados_subversao_V%d", version_counter)
+system(system_cmd2)
+
+sprint(system_cmd2, "copy Parameter_input.txt \Resultados_subversao_V%d", version_counter)
+system(system_cmd2)
+
+// Update sub_version counter
+
+version_counter += 1
+
+WinExec("del /f Version counter.txt")
+
+version_counter_file.wopen("Version counter.txt")
+version_counter_file.printf("%d", version_counter)
+version_counter_file.close()
+
+// Create parameters file
+
+objref  parameter_file
+
+path = getcwd()
+sprint(tmp_path, "%sResultados_subversao_V%d", path, version_counter-1)
+root_path = tmp_path
+
+chdir(root_path)
+parameter_file = new File()
+parameter_file.wopen("parameters.csv")
+
+parameter_file.printf("parameter;value\n")
+chdir(path)
+
+// *********** End of section
+
+
+// *********** Defining cell type excitatory
+
+begintemplate basic_neuron
+
+public soma, dend, position, x, y, z, nclist, biophys_core, biophys_edge, geom, geom_nseg
+create soma, dend
+objectvar nclist
+
+proc init() {
+  nclist = new List()
+  topol()
+  basic_shape()
+  subsets()
+  //geom()
+  //geom_nseg()
+  //biophys_core()
+  x = y = z = 0 // only change via position
+}
+
+proc topol(){
+  connect dend(1), soma(0)
+  basic_shape()
+}
+
+proc basic_shape(){
+  soma {pt3dclear() pt3dadd(0, 0, 0, 20) pt3dadd(0, 0, 20, 20)}
+  dend {pt3dclear() pt3dadd(0, 0, 0, 5) pt3dadd(0, 0, -200, 5)}
+}
+
+proc position() { local i
+  soma for i = 0, n3d()-1 {
+    pt3dchange(i, $1-x+x3d(i), $2-y+y3d(i), $3-z+z3d(i), diam3d(i))
+  }
+  //dend for i = 0, n3d()-1 {
+  //  pt3dchange(i, $1-x+x3d(i), $2-y+y3d(i), $3-z+z3d(i), diam3d(i))
+  //}
+  x = $1  y = $2  z = $3
+}
+
+objref all, somatic, dendritic
+proc subsets() { local i
+  objref all, somatic, dendritic
+  all = new SectionList()
+    soma all.append()
+    dend all.append()
+}
+
+proc geom(){
+  soma {  L = $1  diam = $2  }
+  dend {  L = $3  diam = $4  }
+}
+
+proc geom_nseg() {
+   soma { nseg = $1  }
+   dend { nseg = $2  }
+}
+
+proc biophys_core() { local i
+  soma {
+    Ra = $1
+    print "soma diam = ", soma.diam
+    if ($4 > 0){
+    print "introduzi o meio extracell"
+      insert extracellular
+        xraxial[0] = 4*1e4/($2*soma.diam*soma.diam*3.1415) // 1/($2*1e6*35*1e-4)
+        print "xraxial[0] soma = ", xraxial[0], "MOhm/cm"
+        print "xraxial[0] soma calculado = ", 4*1e4/($2*soma.diam*soma.diam*3.14), "MOhm/cm"
+        xraxial[1] = $3
+        xg[0] = 1e-9
+        print "xg[0] soma = ", xg[0], "S/cm2"
+        xg[1] = $5
+        xc[0] = $6
+        xc[1] = $7
+        e_extracellular = $8
+    }
+    insert hh
+      gnabar_hh = $9
+      gkbar_hh = $10
+      gl_hh = $11
+      el_hh = $12
+  }
+  dend {
+    Ra = $1
+    insert pas
+    if ($4 > 0){
+      insert extracellular
+        //xraxial[0] = 255/$2
+        xraxial[0] = 4*1e4/($2*dend.diam*dend.diam*3.1415) // 1/($2*1e6*35*1e-4)
+        print "xraxial[0] dend = ", xraxial[0], "MOhm/cm"
+        print "xraxial[0] dend calculado = ", 4*1e4/($2*dend.diam*dend.diam*3.1415), "MOhm/cm"
+        xraxial[1] = $3
+        xg[0] = 1e-9
+        print "xg[0] dend = ", xg[0], "S/cm2"
+        // print "xg[0] = ", xg[0]
+        //print "area dend = ", area(0.5)
+        xg[1] = $5
+        xc[0] = $6
+        xc[1] = $7
+        e_extracellular = $8
+    }
+  }
+}
+
+proc biophys_edge() { local i
+    soma {
+    Ra = $1
+    if ($4 > 0){
+    print "introduzi o meio extracell"
+      insert extracellular
+        xraxial[0] = 4*1e4/($2*soma.diam*soma.diam*3.1415)
+        xraxial[1] = $3
+        xg[0] = 1e9
+        xg[1] = $5
+        xc[0] = $6
+        xc[1] = $7
+        e_extracellular = $8
+    }
+    insert hh
+      gnabar_hh = $9
+      gkbar_hh = $10
+      gl_hh = $11
+      el_hh = $12
+  }
+  dend {
+    Ra = $1
+    insert pas
+    if ($4 > 0){
+      insert extracellular
+        xraxial[0] = xraxial[0] = 4*1e4/($2*dend.diam*dend.diam*3.1415)
+        xraxial[1] = $3
+        xg[0] = 1e9
+        xg[1] = $5
+        xc[0] = $6
+        xc[1] = $7
+        e_extracellular = $8
+    }
+  }
+}
+
+
+endtemplate basic_neuron
+
+// *********** End of section
+
+// *********** Defining cell type inhibitory
+
+begintemplate dummy_inhib
+
+	public soma, nclist, geom, geom_nseg, biophys
+	create soma
+  objectvar nclist
+
+  proc init(){
+    nclist = new List()
+    }
+
+  proc geom() {
+    soma {  L = $1  diam = $2  }
+  }
+
+  proc geom_nseg() {
+     soma { nseg = $1  }
+  }
+
+  proc biophys() {
+  		soma {
+  	    Ra = $1
+  	    insert hh
+  	      gnabar_hh = $2
+  	      gkbar_hh = $3
+  	      gl_hh = $4
+  	      el_hh = $5
+  	        }
+	     }
+    //}
+
+endtemplate dummy_inhib
+
+// ******************** End of Template ********************
+
+
+// *********** Defining neurons and defining their properties moving them to their positions
+
+// Grid parameters
+
+k = 15 // 20
+num_neuron_excit = k*k
+objref neuron[num_neuron_excit]
+parameter_file.printf("number of excitatory neurons;%d\n", num_neuron_excit) // This is the syntax of the parameter recordings
+
+num_neuron_inhib = 45
+objref inhib[num_neuron_inhib]
+parameter_file.printf("number of inhibitory neurons;%d\n", num_neuron_inhib)
+
+edge_size = 30
+parameter_file.printf("edge size;%d\n", edge_size)
+
+extracellular_conductance = input_file.scanvar() // S/m (based on literature, values range from 1 to 200)
+print "extracellular_conductance = ", extracellular_conductance
+parameter_file.printf("extracellular conductance;%f\n", extracellular_conductance)
+
+sigma = extracellular_conductance
+
+/*
+if(sigma == 0){
+ extracellular_conductance = 0
+}*/
+
+extracell_correction_xg = input_file.scanvar()
+parameter_file.printf("extracell_correction_xg;%f\n", extracell_correction_xg)
+
+
+// Excitatory cellular parameters
+
+soma_l = 20
+parameter_file.printf("excit soma len;%d\n", soma_l)
+soma_d = 20
+parameter_file.printf("excit soma diam;%d\n", soma_d)
+dend_l = 100
+parameter_file.printf("excit dend len;%d\n", dend_l)
+dend_d = 5
+parameter_file.printf("excit dend diam;%d\n", dend_d)
+soma_nseg = 1
+parameter_file.printf("excit soma nseg;%d\n", soma_nseg)
+dend_nseg = 2
+parameter_file.printf("excit dend nseg;%d\n", dend_nseg)
+ra = 183
+parameter_file.printf("excit axial resistance;%f\n", ra)
+
+
+
+// xraxial0 soma
+if (sigma > 0){
+  xraxial0_soma = 0
+} else{
+  xraxial0_soma = 100/(1256*0.00125)
+}
+print "xraxial0_soma = ", xraxial0_soma
+parameter_file.printf("excit extracellular axial resistance 0;%f\n", xraxial0_soma)
+// xraxial0 dend
+if (sigma > 0){
+  xraxial0_dend = 255/sigma
+} else{
+  xraxial0_soma = 100/(785*0.00125)
+}
+print "xraxial0_dend = ", xraxial0_dend
+parameter_file.printf("excit extracellular axial resistance 0;%f\n", xraxial0_dend)
+//
+xraxial1 = 1e+009
+parameter_file.printf("excit extracellular axial resistance 1;%f\n", xraxial1)
+//xg0 dend
+xg0_dend = extracell_correction_xg*sigma/10
+print "xg0_dend = ", xg0_dend
+parameter_file.printf("excit extracellular conductance 0 dend;%f\n", xg0_dend)
+//xg0 soma
+xg0_soma = sigma/10
+print "xg0_soma = ", xg0_soma
+parameter_file.printf("excit extracellular conductance 0 soma;%f\n", xg0_soma)
+
+
+
+
+xg1 = 1e9
+parameter_file.printf("excit extracellular conductance 1;%f\n", xg1)
+xc0 = 0.001
+parameter_file.printf("excit extracellular capacitance 0;%f\n", xc0)
+xc1 = 0
+parameter_file.printf("excit extracellular capacitance 1;%f\n", xc1)
+eextracellular = 0
+parameter_file.printf("excit extracellular forcing potential;%f\n", eextracellular)
+gnabarhh = 0.12
+parameter_file.printf("excit hh gnabar;%f\n", gnabarhh)
+gkbarhh = 0.036
+parameter_file.printf("excit hh gkbar;%f\n", gkbarhh)
+glhh = 0.0003
+parameter_file.printf("excit hh gl;%f\n", glhh)
+elhh = -54.3
+parameter_file.printf("excit hh el;%f\n", elhh)
+
+// Inhibitory cellular parameters
+
+inhib_soma_l = 20
+parameter_file.printf("inhib soma len;%d\n", inhib_soma_l)
+inhib_soma_d = 20
+parameter_file.printf("inhib soma diam;%d\n", inhib_soma_d)
+inhib_soma_nseg = 1
+parameter_file.printf("inhib soma nseg;%d\n", inhib_soma_nseg)
+inhib_ra = 183
+parameter_file.printf("inhib axial resistance;%f\n", inhib_ra)
+inhib_gnabarhh = 0.12
+parameter_file.printf("inhib hh gnabar;%f\n", inhib_gnabarhh)
+inhib_gkbarhh = 0.036
+parameter_file.printf("inhib hh gkbar;%f\n", inhib_gkbarhh)
+inhib_glhh = 0.0003
+parameter_file.printf("inhib hh gl;%f\n", inhib_glhh)
+inhib_elhh = -54.3
+parameter_file.printf("inhib hh el;%f\n", inhib_elhh)
+
+
+i = 0
+for x = 0, k-1 {
+	for y = 0, k-1{
+			neuron[i] = new basic_neuron()
+			neuron[i].position(x*edge_size,y*edge_size,0)
+      neuron[i].geom(soma_l, soma_d, dend_l, dend_d)
+      neuron[i].geom_nseg(soma_nseg, dend_nseg)
+      if (x != 0 && x != k-1 && y != 0 && y != k-1 ){
+        neuron[i].biophys_core(ra, sigma, xraxial1, sigma*extracell_correction_xg, xg1, xc0, xc1, eextracellular, gnabarhh, gkbarhh, glhh, elhh)
+      }else{
+        neuron[i].biophys_edge(ra, sigma, xraxial1, sigma*extracell_correction_xg, xg1, xc0, xc1, eextracellular, gnabarhh, gkbarhh, glhh, elhh)
+      }
+      /*if (sigma > 0){
+        neuron[i].biophys_core(ra, sigma, xraxial1, sigma*extracell_correction_xg, xg1, xc0, xc1, eextracellular, gnabarhh, gkbarhh, glhh, elhh)
+      }
+      if (sigma == 0){
+        neuron[i].biophys_core(ra, 0.00125, xraxial1, sigma*extracell_correction_xg, xg1, xc0, xc1, eextracellular, gnabarhh, gkbarhh, glhh, elhh)
+      }*/
+			i += 1
+		}
+}
+
+for i = 0,  num_neuron_inhib-1 {
+  inhib[i] = new dummy_inhib()
+  inhib[i].geom(inhib_soma_l, inhib_soma_d)
+  inhib[i].geom_nseg(inhib_soma_nseg)
+  inhib[i].biophys(inhib_ra, inhib_gnabarhh, inhib_gkbarhh, inhib_glhh, inhib_elhh)
+}
+
+
+// *********** Defining stimulus and setting synapses to neurons
+
+objectvar extra_stim_syns[num_neuron_excit], extra_inhib_syns[num_neuron_inhib], stim_syn_list
+objref stimulus[num_neuron_excit], stim_start, nc[num_neuron_excit], nc_inhib[num_neuron_inhib], inhib_stimulus[num_neuron_inhib]
+
+seed = input_file.scanvar()
+print "seed = ", seed
+stim_syn_list = new List()
+stim_start = new Random(seed)
+max_start = 20
+stim_start.uniform(0, max_start)
+parameter_file.printf("external stimulus uniform range from 0 to;%f\n", max_start)
+
+// Stimulus definitions
+
+for i = 0, num_neuron_excit-1 {
+		stimulus[i] = new NetStim(0)
+    excit_stimulus_interval = 20 // mean inteval between stimulus in ms
+		stimulus[i].interval = excit_stimulus_interval // ms
+	  stimulus[i].number = 100000
+		stimulus[i].start = stim_start.repick() // ms
+    excit_stimulus_type = 1
+		stimulus[i].noise = excit_stimulus_type // 0 --> deterministic | 1 --> poisson process
+}
+
+parameter_file.printf("excit external stimulus to excit interval;%f\n", excit_stimulus_interval)
+parameter_file.printf("excit external stimulus to type;%f\n", excit_stimulus_type)
+
+for i = 0, num_neuron_inhib-1 {
+		inhib_stimulus[i] = new NetStim(0)
+    inhib_stimulus_interval = 10
+		inhib_stimulus[i].interval = inhib_stimulus_interval // ms
+	  inhib_stimulus[i].number = 100000
+    inhib_stimulus_type = 1
+		inhib_stimulus[i].start = stim_start.repick() // ms
+		inhib_stimulus[i].noise = inhib_stimulus_type // 0 --> deterministic | 1 --> poisson process
+}
+
+parameter_file.printf("inhib external stimulus to excit interval;%f\n", inhib_stimulus_interval)
+parameter_file.printf("inhib external stimulus to type;%f\n", inhib_stimulus_type)
+
+// Synaptic connections
+/*
+neuron[0].dend extra_stim_syns[0] = new Exp2Syn(0.25)
+extra_stim_syns[0].tau1 = 1
+extra_stim_syns[0].tau2 = 3
+extra_stim_syns[0].e = 0
+nc[0] = new NetCon(stimulus[0], extra_stim_syns[0], -20, 0, 0.1)
+stim_syn_list.append(extra_stim_syns[0])
+stim_syn_counter += 1
+*/
+stim_syn_counter = 0
+
+excit_stim_weight = 0.02 //input_file.scanvar()
+print "excit_stim_weight = ", excit_stim_weight
+
+for i = 0, num_neuron_excit-1{
+	neuron[i].dend extra_stim_syns[i] = new Exp2Syn(0.25)
+  excit_stim_tau1 = 1
+  excit_stim_tau2 = 3
+  extra_stim_syns[i].tau1 = excit_stim_tau1
+  extra_stim_syns[i].tau2 = excit_stim_tau2
+  excit_stim_e = 0
+  extra_stim_syns[i].e = excit_stim_e
+  excit_stim_delay = 0
+  excit_stim_threshold = -20
+	nc[i] = new NetCon(stimulus[i], extra_stim_syns[i], excit_stim_threshold, excit_stim_delay, excit_stim_weight)
+  stim_syn_list.append(extra_stim_syns[i])
+	stim_syn_counter += 1
+}
+
+parameter_file.printf("excit external synapse tau1;%f\n", excit_stim_tau1)
+parameter_file.printf("excit external synapse tau2;%f\n", excit_stim_tau2)
+parameter_file.printf("excit external synapse reversal potential;%f\n", excit_stim_e)
+parameter_file.printf("excit external synapse delay;%f\n", excit_stim_delay)
+parameter_file.printf("excit external synapse weight;%f\n", excit_stim_weight)
+parameter_file.printf("excit external synapse tresholds;%f\n", excit_stim_threshold)
+
+for i = 0, num_neuron_inhib-1{
+	inhib[i].soma extra_inhib_syns[i] = new Exp2Syn(0.25)
+  inhib_stim_tau1 = 1
+  inhib_stim_tau2 = 3
+  extra_inhib_syns[i].tau1 = inhib_stim_tau1
+  extra_inhib_syns[i].tau2 = inhib_stim_tau2
+  inhib_stim_e = 0
+  extra_inhib_syns[i].e = inhib_stim_e
+  inhib_stim_delay = 0
+  inhib_stim_weight = 0.001
+  inhib_stim_threshold = -20
+	nc_inhib[i] = new NetCon(inhib_stimulus[i], extra_inhib_syns[i], inhib_stim_threshold, inhib_stim_delay, inhib_stim_weight)
+  //stim_syn_list.append(extra_stim_syns[i])
+	//stim_syn_counter += 1
+}
+
+parameter_file.printf("inhib external synapse tau1;%f\n", inhib_stim_tau1)
+parameter_file.printf("inhib external synapse tau2;%f\n", inhib_stim_tau2)
+parameter_file.printf("inhib external synapse reversal potential;%f\n", inhib_stim_e)
+parameter_file.printf("inhib external synapse delay;%f\n", inhib_stim_delay)
+parameter_file.printf("inhib external synapse weight;%f\n", inhib_stim_weight)
+parameter_file.printf("inhib external synapse tresholds;%f\n", inhib_stim_threshold)
+
+// *********** End of section
+
+// *********** Synaptic connections between neurons
+
+// Random Variable setup
+
+objref connection_decision, delay, delay_inhibition
+connection_decision = new Random(seed)
+connection_decision.uniform(0,1)
+
+delay = new Random(seed)
+max_excit_synaptic_dalay = 5
+delay.uniform(0,max_excit_synaptic_dalay)
+
+parameter_file.printf("maximum excit synapse delay;%f\n", max_excit_synaptic_dalay)
+
+delay_inhibition = new Random(seed)
+min_inhib_synaptic_delay = 2
+max_inhib_synaptic_delay = 5
+delay_inhibition.uniform(min_inhib_synaptic_delay, max_inhib_synaptic_delay)
+
+parameter_file.printf("minimum inhib synapse delay;%f\n", min_inhib_synaptic_delay)
+parameter_file.printf("maximum inhib synapse delay;%f\n", max_inhib_synaptic_delay)
+
+// Synapse tracking variables
+
+objectvar syntarget, synorigin
+syn_counter = 0
+syntarget = new Vector()
+synorigin = new Vector()
+
+// *********** End of section
+
+// *********** Declaring synapses and netcons
+
+maxsyn = 10000000
+objectvar syns[maxsyn]
+objref netcon[maxsyn]
+
+// excit-excit connections
+
+excit_excit_prob = 0.05
+parameter_file.printf("excit-excit synapse probability;%f\n", excit_excit_prob)
+
+excit_excit_syn_weight = 0.00375 // input_file.scanvar()
+print "excit_excit_syn_weight = ", excit_excit_syn_weight
+
+for source = 0, num_neuron_excit-1 {
+	for target = 0, num_neuron_excit-1 {
+    if (connection_decision.repick() < excit_excit_prob){
+			// setting synapse type
+
+      neuron[target].dend syns[syn_counter] = new Exp2Syn(0.25)
+      excit_excit_syn_tau1 = 1
+      excit_excit_syn_tau2 = 3
+      excit_excit_syn_e = 0
+      syns[syn_counter].tau1 = excit_excit_syn_tau1
+      syns[syn_counter].tau2 = excit_excit_syn_tau2
+      syns[syn_counter].e = excit_excit_syn_e
+
+      // setting the connection
+
+      excit_excit_syn_threshold = -20
+
+      neuron[source].soma neuron[target].nclist.append(new NetCon(&v(1), syns[syn_counter], excit_excit_syn_threshold, delay.repick(), excit_excit_syn_weight)) // still need to create the delay matrix
+			//stim_syn_list.append(syns[syn_counter])
+			//syntarget.append(target)
+			//synorigin.append(source)
+      syn_counter += 1
+    }
+  }
+}
+
+parameter_file.printf("excit-excit synapse tau1;%f\n", excit_excit_syn_tau1)
+parameter_file.printf("excit-excit synapse tau2;%f\n", excit_excit_syn_tau2)
+parameter_file.printf("excit-excit synapse reversal potential;%f\n", excit_excit_syn_e)
+parameter_file.printf("excit-excit synapse threshold;%f\n", excit_excit_syn_threshold)
+parameter_file.printf("excit-excit synapse weight;%f\n", excit_excit_syn_weight)
+
+// Excit-Inhib connections
+
+excit_inhib_prob = 0.05
+parameter_file.printf("excit-inhib synapse probability;%f\n", excit_inhib_prob)
+
+for source = 0, num_neuron_excit-1 {
+	for target = 0, num_neuron_inhib-1 {
+    if (connection_decision.repick() < excit_inhib_prob){
+			// setting synapse type
+
+      inhib[target].soma syns[syn_counter] = new Exp2Syn(0.25)
+      excit_inhib_syn_tau1 = 1
+      excit_inhib_syn_tau2 = 3
+      excit_inhib_syn_e = 0
+      syns[syn_counter].tau1 = excit_inhib_syn_tau1
+      syns[syn_counter].tau2 = excit_inhib_syn_tau2
+      syns[syn_counter].e = excit_inhib_syn_e
+
+      // setting the connection
+
+      excit_inhib_syn_threshold = -20
+      excit_inhib_syn_weight = 0.1
+      neuron[source].soma inhib[target].nclist.append(new NetCon(&v(1), syns[syn_counter], excit_inhib_syn_threshold, delay.repick(), excit_inhib_syn_weight)) // still need to create the delay matrix
+			//stim_syn_list.append(syns[syn_counter])
+			//syntarget.append(target)
+			//synorigin.append(source)
+      syn_counter += 1
+    }
+  }
+}
+
+parameter_file.printf("excit-inhib synapse tau1;%f\n", excit_inhib_syn_tau1)
+parameter_file.printf("excit-inhib synapse tau2;%f\n", excit_inhib_syn_tau2)
+parameter_file.printf("excit-inhib synapse reversal potential;%f\n", excit_inhib_syn_e)
+parameter_file.printf("excit-inhib synapse threshold;%f\n", excit_inhib_syn_threshold)
+parameter_file.printf("excit-inhib synapse weight;%f\n", excit_inhib_syn_weight)
+
+// Inhib-Excit connections
+
+inhib_excit_prob = 0.05
+parameter_file.printf("inhib-excit synapse probability;%f\n", inhib_excit_prob)
+
+for source = 0, num_neuron_inhib-1 {
+	for target = 0, num_neuron_excit-1 {
+    if (connection_decision.repick() < inhib_excit_prob){
+			// setting synapse type
+
+      neuron[target].dend syns[syn_counter] = new Exp2Syn(0.75)
+      inhib_excit_syn_tau1 = 1
+      inhib_excit_syn_tau2 = 6
+      inhib_excit_syn_e = -70
+      syns[syn_counter].tau1 = inhib_excit_syn_tau1
+      syns[syn_counter].tau2 = inhib_excit_syn_tau2
+      syns[syn_counter].e = inhib_excit_syn_e
+
+      // setting the connection
+
+      inhib_excit_syn_threshold = -20
+      inhib_excit_syn_weight = 0.0025
+      inhib[source].soma neuron[target].nclist.append(new NetCon(&v(1), syns[syn_counter], inhib_excit_syn_threshold, delay_inhibition.repick(), inhib_excit_syn_weight)) // still need to create the delay matrix
+			//stim_syn_list.append(syns[syn_counter])
+			//syntarget.append(target)
+			//synorigin.append(source)
+      syn_counter += 1
+    }
+  }
+}
+
+parameter_file.printf("inhib-excit synapse tau1;%f\n", inhib_excit_syn_tau1)
+parameter_file.printf("inhib-excit synapse tau2;%f\n", inhib_excit_syn_tau2)
+parameter_file.printf("inhib-excit synapse reversal potential;%f\n", inhib_excit_syn_e)
+parameter_file.printf("inhib-excit synapse threshold;%f\n", inhib_excit_syn_threshold)
+parameter_file.printf("inhib-excit synapse weight;%f\n", inhib_excit_syn_weight)
+
+// *********** End of section
+
+// *********** Ephaptic coupling via Linear Mechanism
+
+dend_nseg = 2
+soma_nseg = 1
+
+objref gmat, cmat, bvec, e, xl, layer, sl, lm, auxlist, ge_list
+
+proc setExtraLink() {
+
+sl = new SectionList()
+
+for i = 0, dend_nseg - 1 {
+	for j = 0, num_neuron_excit-1 {
+		neuron[j].dend sl.append()
+	}
+}
+
+for i = 0, soma_nseg - 1 {
+	for j = 0, num_neuron_excit-1 {
+		neuron[j].soma sl.append()
+	}
+}
+
+auxlist = new SectionList()
+
+neuron[0].dend auxlist.append()
+neuron[0].soma auxlist.append()
+
+	nsegs = dend_nseg + soma_nseg	// will contain total connected segs
+
+	print "_________________________________________"
+	print "Total Connected Segments = ", num_neuron_excit*nsegs
+	print "_________________________________________"
+
+	gmat = new Matrix(num_neuron_excit*nsegs, num_neuron_excit*nsegs, 2) // new Matrix(nrow, ncol, type)
+	cmat = new Matrix(num_neuron_excit*nsegs, num_neuron_excit*nsegs, 2) // new Matrix(nrow, ncol, type)
+	bvec = new Vector(num_neuron_excit*nsegs)
+	xl = new Vector()
+  ge_list =  new Vector()
+	layer = new Vector(num_neuron_excit*nsegs)
+	layer.fill(1)
+
+forsec auxlist {
+	for (x, 0) {
+		for i = 0, num_neuron_excit - 1{
+			print "secname = ", secname()
+			xl.append(x)	// for neuron 1
+      /*
+      ifsec "dend" {
+        ge_list.append(0.05*sigma*$1)
+      }
+      ifsec "soma" {
+        ge_list.append(1.25*sigma*$1)
+      }
+      */
+		}
+	}
+}
+
+
+e = new Vector(num_neuron_excit*nsegs)
+
+for (i = 0; i < dend_nseg; i=i+1) {
+    ge_list.append(0.05*sigma*$1)
+}
+for (i = 0; i < soma_nseg; i=i+1) {
+    ge_list.append(1.25*sigma*$1)
+}
+
+
+ge = 0.071*sigma*$1
+print "ge = ", ge
+print "ge = ", 1e-6/(ge*1256*1e-8) ,"MegOhms"
+print "ge = ", ge*1256*1e-8 ,"Siemens"
+extracellular_capacitance = 0
+
+parameter_file.printf("extralink extracellular conductance;%f\n", extracellular_conductance)
+parameter_file.printf("extralink extracellular capacitance;%f\n", extracellular_capacitance)
+
+sqrt2 = 1.41421356237
+
+// **************** building GMAT (defines conductances between extracel spaces)
+
+for (i=0; i<(nsegs); i=i+1){
+	for (j=0; j<k; j=j+1){
+		for (w=0; w<k; w=w+1){
+			cont = 0
+
+			if(w-1>=0 && j-1>=0) {
+				gmat.x[i*k*k + j*k + w][i*k*k + (j-1)*k + (w-1)] += -ge_list.x[i]/sqrt2 // -ge/sqrt2 // esquerda em cima
+				cont += -ge_list.x[i]/sqrt2 // -ge/sqrt2
+			}
+			if(w+1<k && j-1>=0) {
+				gmat.x[i*k*k + j*k + w][i*k*k + (j-1)*k + (w+1)] += -ge_list.x[i]/sqrt2 // -ge/sqrt2 // direita em cima
+				cont += -ge_list.x[i]/sqrt2 // -ge/sqrt2
+			}
+			if(w-1>=0 && j+1<k) {
+				gmat.x[i*k*k + j*k + w][i*k*k + (j+1)*k + (w-1)] += -ge_list.x[i]/sqrt2 // -ge/sqrt2 // esquerda em baixo
+				cont += -ge_list.x[i]/sqrt2 // -ge/sqrt2
+			}
+			if(w+1<k && j+1<k) {
+				gmat.x[i*k*k + j*k + w][i*k*k + (j+1)*k + (w+1)] += -ge_list.x[i]/sqrt2 // -ge/sqrt2 // direita em baixo
+				cont += -ge_list.x[i]/sqrt2 // -ge/sqrt2
+			}
+			if(j-1>=0) {
+				gmat.x[i*k*k + j*k + w][i*k*k + (j-1)*k + (w)] += -ge_list.x[i] // -ge // Em cima
+				cont += -ge_list.x[i] // -ge
+			}
+			if(j+1<k) {
+				gmat.x[i*k*k + j*k + w][i*k*k + (j+1)*k + (w)] += -ge_list.x[i] // -ge // Em baixo
+				cont += -ge_list.x[i] // -ge
+			}
+			if(w-1>=0) {
+				gmat.x[i*k*k + j*k + w][i*k*k + (j)*k + (w-1)] += -ge_list.x[i] // -ge // A esquerda
+				cont += -ge_list.x[i] // -ge
+			}
+			if(w+1<k) {
+				gmat.x[i*k*k + j*k + w][i*k*k + (j)*k + (w+1)] += -ge_list.x[i] // -ge // a direita
+				cont += -ge_list.x[i] // -ge
+			}
+
+			gmat.x[i*k*k + j*k + w][i*k*k + j*k + w] += -cont
+			//printf ("%d \n", i*k*k + j*k + w)
+		}
+	}
+}
+
+	lm = new LinearMechanism(cmat, gmat, e, bvec, sl, xl, layer)
+
+}
+
+
+ephaptic_switch = input_file.scanvar()
+ge_correction = input_file.scanvar()
+
+if ((extracellular_conductance > 0) && (ephaptic_switch == 1) && (extracellular_conductance < 1000)){
+  print "ephaptic coupling included"
+  setExtraLink(ge_correction)
+}
+
+proc printInfo() {
+	print "_________________________________________"
+	print "gmat = "
+	print gmat.printf()
+	print "_________________________________________"
+	print "cmat = "
+	print cmat.printf()
+	print "_________________________________________"
+	print "e = "
+	print e.printf()
+	print "_________________________________________"
+	print "bvec = "
+	print bvec.printf()
+	print "_________________________________________"
+	print "sl = "
+	print sl.printnames()
+	print "_________________________________________"
+	print "xl = "
+	print xl.printf()
+  print "_________________________________________"
+	print "ge_list = "
+	print ge_list.printf()
+	print "_________________________________________"
+	print "layer = "
+	print layer.printf()
+	print "_________________________________________"
+}
+//printInfo()
+
+// *********** End of section
+
+
+// *********** Setting up records of transmembrane current and synaptic current
+
+objref tmp, tmp_datafile, seclist
+objectvar ivecs, transmembrane_i_vecs, vext_vecs
+strdef tmp_filename, extension, filename_extra_stim_syns, filename_transmembrane_i, neuron_name, filename_vext
+
+
+
+// Defining Variables
+
+ivecs = new List()
+transmembrane_i_vecs = new List()
+vext_vecs = new List()
+seclist = new SectionList()
+
+// setting up the vector records
+
+// For synaptic current of excitatory synapses
+for k = 0, stim_syn_list.count()-1 {
+	tmp = new Vector()
+	tmp.record(&stim_syn_list.o(k).i, 0.025)
+	ivecs.append(tmp)
+}
+
+// For transmembrane potential of each segment
+
+for i = 0, num_neuron_excit-1 {
+	neuron[i].dend seclist.append()
+	neuron[i].soma seclist.append()
+}
+
+if (extracellular_conductance > 0){
+  forsec seclist{
+    point = 1/(2*nseg)
+    print nseg
+    for w = 0, nseg - 1 {
+      tmp =  new Vector()
+      tmp.record(&i_membrane(point), 0.025)
+      transmembrane_i_vecs.append(tmp)
+      //print area(point)
+      point += 1/nseg
+      }
+  }
+}
+
+// For extracellular potential of each segment
+
+sampling_rate = 40000 // Hz
+parameter_file.printf("Sampling rate (Hz);%f\n", extracellular_conductance)
+
+if (extracellular_conductance > 0){
+  forsec seclist{
+    point = 1/(2*nseg)
+    print nseg
+    for w = 0, nseg - 1 {
+      tmp =  new Vector()
+      tmp.record(&vext[0](point), 1000/sampling_rate)
+      vext_vecs.append(tmp)
+      //print area(point)
+      point += 1/nseg
+    }
+  }
+}
+
+
+// String definitions
+
+extension = "txt"
+filename_extra_stim_syns = "Corrente sinaptica externa celula "
+filename_transmembrane_i = "Corrente transmembrana da celula "
+filename_vext = "Potencial extracelular da celula "
+
+// *********** End of section
+
+// *********** Extracellular potential drive from "outside"
+
+objectvar extra_pot[num_neuron_excit*3]
+counter = 0
+
+proc external_forcing_potential(){
+  forall for (x, 0) {
+    extra_pot[counter] = new Vector()
+    tmp_datafile = new File()
+    neuron_name = secname()
+    sprint(tmp_filename, "%s%s segmento %d.%s", filename_transmembrane_i, neuron_name, w, extension)
+    tmp_datafile.ropen(tmp_filename)
+    //extra_pot[counter] =
+    extra_pot[counter].play(&e_extracellular(x), 0.025)
+
+    extra_pot[counter].printf()
+    counter += 1
+
+  }
+}
+
+//external_forcing_potential()
+
+
+// *********** End of section
+
+// *********** Raster plot
+
+// Prepare to record spike trains
+
+objref netcon, vec, spikes, nil // nil is just a handy alias for NULLobject
+spikes = new List()
+
+// recording spikes in vec
+
+for i = 0, num_neuron_excit-1 {
+		vec = new Vector()
+		neuron[i].soma netcon = new NetCon(&v(1), nil, -20, 0, 1)
+		netcon.record(vec)  // vec will record the firing times
+		spikes.append(vec)  // add vec to the list of vectors that record firing times
+}
+for i = 0, num_neuron_inhib-1 {
+		vec = new Vector()
+		inhib[i].soma netcon = new NetCon(&v(1), nil, -20, 0, 1)
+		netcon.record(vec)  // vec will record the firing times
+		spikes.append(vec)  // add vec to the list of vectors that record firing times
+}
+
+// defining the proc to plot raster or psth
+
+tstop = 1000
+parameter_file.printf("Simulation duration;%f\n", tstop)
+
+objref graster, spikey
+graster = new Graph(0)
+graster.size(0, tstop ,0, num_neuron_excit + num_neuron_inhib)
+graster.view(0, 0, tstop, num_neuron_excit + num_neuron_inhib, 300, 105, 300.48, 200.32)
+strdef filename_raster
+
+filename_raster = "Raster points "
+
+proc showraster() {
+  graster.erase_all()
+  for i = 0, num_neuron_excit + num_neuron_inhib - 1 {  // iterate over all cells
+    // number of elements in spikey must equal number of spikes fired by cell i
+    // value of each element must equal i+1
+    spikey = spikes.object(i).c
+    sprint(tmp_filename, "%s%d.%s", filename_raster, i, extension)
+    tmp_datafile = new File()
+    tmp_datafile.wopen(tmp_filename)
+    spikey.printf(tmp_datafile)
+    spikey.fill(i+1)
+    spikey.mark(graster, spikes.object(i), "|", 6)
+  }
+  objref spikey  // we don't need this specific reference any more
+}
+
+
+// *********** End of section
+
+// *********** Run control, parameters and results recordings
+
+proc RunSim(){
+
+  // Open LFPsim add-on
+  path = getcwd()
+  print "diretorio atual = ", path
+  xopen("extracellular_electrode.hoc")
+
+  run()
+  file_write()
+  // Go To directory where results will be stored
+
+  sprint(tmp_path, "%sResultados_subversao_V%d", path, version_counter-1)
+  root_path = tmp_path
+  bool = chdir(tmp_path)
+
+  // Change directory and record synaptic currents
+  /*
+  system("mkdir synaptic_currents")
+  sprint(tmp_path, "%s/synaptic_currents", root_path)
+  bool = chdir(tmp_path)
+
+  for w = 0, ivecs.count()-1 {
+    sprint(tmp_filename, "%s%d.%s", filename_extra_stim_syns, w, extension)
+    tmp_datafile = new File()
+    tmp_datafile.wopen(tmp_filename)
+    ivecs.o(w).printf(tmp_datafile)
+    tmp_datafile.close()
+  }
+
+  bool = chdir(root_path) // returning to results folder root
+
+  // Change directory and record transmembrane currents
+
+  system("mkdir transmembrane_currents")
+  sprint(tmp_path, "%s/transmembrane_currents", root_path)
+  bool = chdir(tmp_path)
+
+  counter = 0
+  forsec seclist {
+    for w = 0, nseg - 1 {
+      neuron_name = secname()
+      sprint(tmp_filename, "%s%s segmento %d.%s", filename_transmembrane_i, neuron_name, w, extension)
+      tmp_datafile = new File()
+      tmp_datafile.wopen(tmp_filename)
+      transmembrane_i_vecs.o(counter).printf(tmp_datafile)
+      tmp_datafile.close()
+      counter += 1
+      }
+    }
+
+    bool = chdir(root_path) // returning to results folder root
+    */
+    // Change directory and record external potentials
+
+    system("mkdir external_potentials")
+    sprint(tmp_path, "%s/external_potentials", root_path)
+    bool = chdir(tmp_path)
+    if (extracellular_conductance > 0){
+      counter = 0
+      forsec seclist {
+        for w = 0, nseg - 1 {
+          neuron_name = secname()
+          sprint(tmp_filename, "%s%s segmento %d.%s", filename_vext, neuron_name, w, extension)
+          tmp_datafile = new File()
+          tmp_datafile.wopen(tmp_filename)
+          vext_vecs.o(counter).printf(tmp_datafile)
+          tmp_datafile.close()
+          counter += 1
+        }
+      }
+    }
+
+    bool = chdir(root_path) // returning to results folder root
+
+    // Change directory and record rasters
+
+    system("mkdir rasters")
+    sprint(tmp_path, "%s/rasters", root_path)
+    bool = chdir(tmp_path)
+
+    // show raster plot
+    showraster()
+
+    bool = chdir(root_path) // returning to results folder root
+
+}
+
+RunSim()
+
+
+xpanel("Run Simulation")
+	xlabel("Run Simulation")
+  xlabel("")
+	xbutton("RunSim","RunSim()")
+	xlabel("")
+xpanel(50, 750)
+
+
+parameter_file.close()
+
+chdir(path)
+current_run_file = new File()
+current_run_file.wopen("Current Run.txt")
+current_run_file.printf("0")
+current_run_file.close()
+
+quit()
+
+// *********** End of section
