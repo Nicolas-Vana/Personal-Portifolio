@@ -1,3 +1,0 @@
-load_file("nrngui.hoc")
-load_file("model.hoc")
-xopen("session1.ses")
