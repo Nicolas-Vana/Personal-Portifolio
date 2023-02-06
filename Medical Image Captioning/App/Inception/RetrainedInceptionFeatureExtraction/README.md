@@ -1,0 +1,1 @@
+This model is not available in because of its large size. You may use the notebooks under "Inception_Based_models_Training/Notebooks/Retrain inception on Cuis" to retrain this model and include it on the Model to run the app with all of its functionalities.
