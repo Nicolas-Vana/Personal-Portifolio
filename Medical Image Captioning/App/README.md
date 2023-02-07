@@ -9,8 +9,11 @@ In this build the user can generate captions for some sample images from the ROC
 ![Alt text](Examples/ROCO_00016.png?raw=true "ROCO_00016.png")
 
 True caption - Axial source image from an intracranial magnetic resonance angiogram reveals abnormal arterial signal elevation in the left more than right cavernous sinuses consistent with a carotid cavernous fistula, as indicated by the arrow.
+
 Pretrained - magnetic resonance imaging of the brain showing a welldefined lesion in the right frontal lobe
+
 Retrained - magnetic resonance imaging of the brain showing a mass in the left frontal lobe
+
 Transformer - t2weighted magnetic resonance image of the brain showing a large mass in the left side of the right side
 
 As seen, the models are not capable of generating in-depth descriptions of the images and diagnostics identified in the true captions, showing some serious limitations in its applications. However, most of the time, the models are capable of correctly identifying the type of medical image presented and the major anamotical features of the image.   
