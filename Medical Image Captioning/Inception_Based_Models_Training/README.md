@@ -12,5 +12,5 @@ Finally, The notebooks are divided into multiple steps such as the preprocessing
 
 A better picture of the full workflow between all these notebooks is illustrated in the diagram below.
 
-![Alt text](Notebook Workflow.png?raw=true "Workflow")
+![Alt text](Notebook Workflow.png?raw=true "Notebook Workflow")
 
