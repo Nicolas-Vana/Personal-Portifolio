@@ -10,7 +10,6 @@ Only a small fraction of the data is available here for a sample of how the mode
 
 Finally, The notebooks are divided into multiple steps such as the preprocessing of text data, training of the feature extraction network using the ROCO dataset, or simply doing inference using the pretrained InceptionV3 model, building and training the LSTM models used for text generation and more. This is done because some of the notebooks may take hours to run and some of the outputs may be used as input by multiple notebooks.
 
+![Alt text](Notebook_Workflow.png?raw=true "Notebook_Workflow")
+
 A better picture of the full workflow between all these notebooks is illustrated in the diagram below.
-
-![Alt text](Notebook Workflow.png?raw=true "Notebook Workflow")
-
