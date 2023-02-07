@@ -12,4 +12,4 @@ Finally, The notebooks are divided into multiple steps such as the preprocessing
 
 ![Alt text](Notebook_Workflow.png?raw=true "Notebook_Workflow")
 
-A better picture of the full workflow between all these notebooks is illustrated in the diagram below.
+A better picture of the full workflow between all these notebooks is illustrated in the diagram above.
