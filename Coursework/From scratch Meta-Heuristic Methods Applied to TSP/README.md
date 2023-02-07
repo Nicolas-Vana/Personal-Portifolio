@@ -1,1 +1,0 @@
-Using meta-heuristic approaches to solve the Travelling salesman problem (TSP). Given the combinatorial nature of the TSP, this methods are one of the many ways to achieve reasonably good solutions to a problem that is NP-hard. 
