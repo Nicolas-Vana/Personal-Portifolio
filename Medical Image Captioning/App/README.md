@@ -6,7 +6,7 @@ Because of github file size limitations the data for the models was removed and 
 
 In this build the user can generate captions for some sample images from the ROCO dataset or upload their own image. He is also prompted to choose a model that should be used for the caption generation.
 
-![Alt text](ROCO_00016.png?raw=true "ROCO_00016.png")
+![Alt text](Examples/ROCO_00016.png?raw=true "ROCO_00016.png")
 
 True caption - Axial source image from an intracranial magnetic resonance angiogram reveals abnormal arterial signal elevation in the left more than right cavernous sinuses consistent with a carotid cavernous fistula, as indicated by the arrow.
 Pretrained - magnetic resonance imaging of the brain showing a welldefined lesion in the right frontal lobe
