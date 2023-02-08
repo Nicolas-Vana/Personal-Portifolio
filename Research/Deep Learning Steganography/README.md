@@ -6,11 +6,11 @@ Some of my experience using TensorFlow is highlighted here.
 
 The network has the following topology and is based mostly 2d convolutional layers:
 
-![Alt text]("Network Diagram.png"?raw=true "Network Diagram")
+![Alt text](Network Diagram.png?raw=true "Network Diagram")
 
 And the full functional model is as follows:
 
-![Alt text]("Functional Model.png"?raw=true "Functional Model")
+![Alt text](Functional Model.png?raw=true "Functional Model")
 
 Some of the preliminary results can be seen:
 
