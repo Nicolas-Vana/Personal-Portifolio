@@ -1,0 +1,2 @@
+# UPS-BR-Data-Analytics-Case
+This folder has the 3 deliverables for the UPS BR Data Analytics Case. A text file with the rationale for the inclusions made on the Power BI deliverable is also available. 
